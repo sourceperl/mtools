@@ -2,6 +2,7 @@
 
 import paho.mqtt.client as mqtt
 from datetime import datetime
+import requests
 import pytz
 import json
 
@@ -22,44 +23,24 @@ def iso_format(dt):
     isostring = datetime.strftime(dt, '%Y-%m-%dT%H:%M:%S.{0}Z')
     return isostring.format(int(round(dt.microsecond/1000.0)))
 
+def update_thingspeak(params):
+    r = requests.post('https://api.thingspeak.com/update', data=params)
+    return ((r.status_code == 200) and (int(r.text) != 0))
+
 def on_connect(mqttc, obj, flags, rc):
     print("connect ok [rc: "+str(rc)+"]")
 
 def on_message(mqttc, obj, msg):
     # garden atmo pressure (normalize sea level)
-    if msg.topic == "rfm12/18/float/1":
-        try:
-            value = round(float(msg.payload)/0.997275, 2)
-        except:
-            value = None
-
-        msg_json = json.dumps({"value": value, "unit":"hPa", "update": iso_format(datetime.utcnow())})
-        mqttc.publish("pub/house/garden/pressure_sea_level", msg_json)
-
-    # garden temperature
-    if msg.topic == "rfm12/18/float/2":
-        try:
-            value = round(float(msg.payload), 2)
-        except:
-            value = None
-
-        msg_json = json.dumps({"value": value, "unit":'C', "update": iso_format(datetime.utcnow())})
-        mqttc.publish("pub/house/garden/temperature", msg_json)
-
-    # convert meteo_vig in color for dep_59
-    if msg.topic == "pub/meteo_vig/dep/59":
-        # map level/color
-        lvl_color = {0: "000000", 1:"00FF00", 2:"FFFF00", 3:"FF6600", 4:"FF0000"}
-        color = lvl_color[0]
+    if msg.topic == "pub/house/garden/temperature":
         try:
             json_data = json.loads(msg.payload)
-            color = lvl_color[json_data['value']]
+            value = float(json_data['value'])
+            iso_dt = str(json_data['update'])
         except:
-            color = "000000"
-
-        mqttc.publish("test/color", color)
-
-    #print(msg.topic+" "+str(msg.qos)+" "+str(msg.payload))
+            value = None
+        # upload value
+        update_thingspeak({'api_key': '<MY_KEY_HERE>', 'created_at': iso_dt, 'field1': value})
 
 def on_publish(mqttc, obj, mid):
     print("mid: "+str(mid))
@@ -77,9 +58,8 @@ mqttc.on_publish = on_publish
 #mqttc.on_subscribe = on_subscribe
 mqttc.connect("localhost", 1883, 60)
 # subscribes
-mqttc.subscribe("rfm12/18/float/1", 0)
-mqttc.subscribe("rfm12/18/float/2", 0)
-mqttc.subscribe("pub/meteo_vig/dep/59", 0)
+mqttc.subscribe("pub/house/garden/temperature", 0)
+mqttc.subscribe("pub/house/garden/pressure_sea_level", 0)
 
 mqttc.loop_forever()
 

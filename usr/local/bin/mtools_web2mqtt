@@ -10,19 +10,21 @@ from datetime import datetime
 import paho.mqtt.publish as publish
 
 def iso_format(dt):
-    """ return an ISO string from a datetime object
+    """ return an ISO string (at zulu time) from a datetime object
 
-    :param dt: a datetime object
+    :param dt: a datetime object (naive or not)
     :type dt: datetime
     :return: datetime as ISO string
     :rtype: str
     """
-    try:
-        utc = dt - dt.utcoffset()
-    except TypeError as e:
-        utc = dt
-    isostring = datetime.strftime(utc, '%Y-%m-%dT%H:%M:%S.{0}Z')
-    return isostring.format(int(round(utc.microsecond/1000.0)))
+    # naive is UTC other is convert to UTC
+    if dt.tzinfo is None:
+        dt = pytz.utc.localize(dt)
+    else:
+        dt = dt.astimezone(pytz.utc)
+    # convert dt to isostring at zero meridian time
+    isostring = datetime.strftime(dt, '%Y-%m-%dT%H:%M:%S.{0}Z')
+    return isostring.format(int(round(dt.microsecond/1000.0)))
 
 def get_weather_vig():
     """ retrieve french 'vigilance meteo' data from vigilance server
