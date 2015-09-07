@@ -1,0 +1,96 @@
+#!/usr/bin/python
+
+import time
+import schedule
+import requests
+import json
+import pytz
+from xml.dom import minidom
+from datetime import datetime
+import paho.mqtt.publish as publish
+
+def iso_format(dt):
+    """ return an ISO string from a datetime object
+
+    :param dt: a datetime object
+    :type dt: datetime
+    :return: datetime as ISO string
+    :rtype: str
+    """
+    try:
+        utc = dt - dt.utcoffset()
+    except TypeError as e:
+        utc = dt
+    isostring = datetime.strftime(utc, '%Y-%m-%dT%H:%M:%S.{0}Z')
+    return isostring.format(int(round(utc.microsecond/1000.0)))
+
+def get_weather_vig():
+    """ retrieve french 'vigilance meteo' data from vigilance server
+
+    :return: map build date and a dict with datas for each department
+    :rtype: array(datetime, dict) or None
+    """
+    # some const
+    URL = 'http://vigilance.meteofrance.com/data/NXFR34_LFPW_.xml'
+    # request XML data from server
+    r = requests.get(URL)
+    # check error
+    if (r.status_code == 200):
+        # dom parsing
+        dom = minidom.parseString(r.text)
+        # set dict for dep data
+        dep_data = {}
+        # map build date
+        tz = pytz.timezone('Europe/Paris')
+        map_date = str(dom.getElementsByTagName('entetevigilance')[0].
+                       getAttribute('dateinsert'))
+        map_dt = tz.localize(datetime(int(map_date[0:4]), int(map_date[4:6]),
+                                      int(map_date[6:8]), int(map_date[8:10]),
+                                      int(map_date[10:12])))
+        # parse every departments
+        for items in dom.getElementsByTagName('datavigilance'):
+            # current "department"
+            dep_code = str(items.attributes['dep'].value)
+            # get risk ID  if exist
+            risk_id = None
+            for risk in items.getElementsByTagName('risque'):
+              risk_id = int(risk.attributes['valeur'].value)
+            # get flood ID if exist
+            flood_id = None
+            for flood in items.getElementsByTagName('crue'):
+              flood_id = int(flood.attributes['valeur'].value)
+            # get color ID
+            color_id = int(items.attributes['couleur'].value)
+            # build dep_data
+            dep_data[dep_code] = {'vig_level': color_id,
+                                  'flood_level': flood_id,
+                                  'risk_id': risk_id}
+        return (map_dt, dep_data)
+    else:
+        return None
+
+# define jobs
+def job_vig_meteo():
+    """ publish 'vigilance meteo' for 69/62 departments
+    """
+    try:
+        (date, dep) = get_weather_vig()
+        # build json and publish
+        json_msg = json.dumps({"value": dep['59']['vig_level'],
+                               "update":iso_format(datetime.utcnow()),
+                               "build_date": iso_format(date)})
+        publish.single("pub/meteo_vig/dep/59", json_msg, retain=True)
+        json_msg = json.dumps({"value": dep['62']['vig_level'],
+                               "update":iso_format(datetime.utcnow()),
+                               "build_date": iso_format(date)})
+        publish.single("pub/meteo_vig/dep/62", json_msg, retain=True)
+    except:
+        pass
+
+# schedule all jobs
+schedule.every(15).minutes.do(job_vig_meteo)
+
+# main loop
+while True:
+    schedule.run_pending()
+    time.sleep(1)
