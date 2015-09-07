@@ -14,3 +14,13 @@ Setup Mosquitto for a Raspberry Pi:
 Setup Python :
 
     sudo pip install -r requirements.txt
+
+Setup supervisor :
+
+    sudo apt-get install supervisor
+    sudo cp etc/supervisor/conf.d/* /etc/supervisor/conf.d/
+    sudo supervisorctl update
+
+Setup mtools :
+
+    sudo cp -r usr/local/bin/* /usr/local/bin/
