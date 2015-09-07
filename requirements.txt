@@ -1,0 +1,4 @@
+paho-mqtt==1.1
+pytz==2012c
+requests==2.0.0
+schedule==0.3.2
