@@ -9,6 +9,7 @@ Setup Mosquitto for a Raspberry Pi:
     cd /etc/apt/sources.list.d/
     sudo curl -O http://repo.mosquitto.org/debian/mosquitto-repo.list
     sudo apt-get update
+    sudo apt-get install mosquitto mosquitto-clients
 
 Setup Python :
 
