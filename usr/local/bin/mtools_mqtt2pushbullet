@@ -1,0 +1,47 @@
+#!/usr/bin/python
+
+import paho.mqtt.client as mqtt
+from pushbullet import Pushbullet
+import json
+
+# some consts
+PB_API_KEY = "<YOUR_PB_KEY>"
+
+# some vars
+pb = Pushbullet(PB_API_KEY)
+
+#def on_connect(mqttc, obj, flags, rc):
+#    print("connect ok [rc: "+str(rc)+"]")
+
+def on_message(mqttc, obj, msg):
+    # global vars
+    global pb
+    # garden atmo pressure (normalize sea level)
+    if msg.topic == "gateway/pushbullet/push_message":
+        try:
+            json_data = json.loads(msg.payload)
+            title = str(json_data['title'])
+            body = str(json_data['body'])
+            pb.push_note(title, body)
+        except:
+            pass
+
+#def on_publish(mqttc, obj, mid):
+#    print("mid: "+str(mid))
+
+#def on_subscribe(mqttc, obj, mid, granted_qos):
+#    print("Subscribed: "+str(mid)+" "+str(granted_qos))
+
+#def on_log(mqttc, obj, level, string):
+#    print(string)
+
+mqttc = mqtt.Client()
+mqttc.on_message = on_message
+#mqttc.on_connect = on_connect
+#mqttc.on_publish = on_publish
+#mqttc.on_subscribe = on_subscribe
+mqttc.connect("localhost", 1883, 60)
+# subscribes
+mqttc.subscribe("gateway/pushbullet/push_message", 0)
+
+mqttc.loop_forever()
