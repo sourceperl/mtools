@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 import time
 import schedule
@@ -38,8 +39,8 @@ def get_weather_vig():
     r = requests.get(URL)
     # check error
     if (r.status_code == 200):
-        # dom parsing
-        dom = minidom.parseString(r.text)
+        # dom parsing (convert UTF-8 r.text to XML char)
+        dom = minidom.parseString(r.text.encode('ascii', 'xmlcharrefreplace'))
         # set dict for dep data
         dep_data = {}
         # map build date
