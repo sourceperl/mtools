@@ -1,9 +1,14 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
+# -*- coding: utf-8 -*-
 
 import paho.mqtt.client as mqtt
 from datetime import datetime
 import pytz
 import json
+
+# global vars
+_dep59_lvl = 0
+_dep62_lvl = 0
 
 def iso_format(dt):
     """ return an ISO string (at zulu time) from a datetime object
@@ -26,40 +31,57 @@ def on_connect(mqttc, obj, flags, rc):
     print("connect ok [rc: "+str(rc)+"]")
 
 def on_message(mqttc, obj, msg):
+    # global vars
+    global _dep59_lvl, _dep62_lvl
     # garden atmo pressure (normalize sea level)
     if msg.topic == "rfm12/18/float/1":
         try:
             value = round(float(msg.payload)/0.997275, 2)
         except:
             value = None
-
         msg_json = json.dumps({"value": value, "unit":"hPa", "update": iso_format(datetime.utcnow())})
         mqttc.publish("pub/house/garden/pressure_sea_level", msg_json)
-
     # garden temperature
     if msg.topic == "rfm12/18/float/2":
         try:
             value = round(float(msg.payload), 2)
         except:
             value = None
-
         msg_json = json.dumps({"value": value, "unit":'C', "update": iso_format(datetime.utcnow())})
         mqttc.publish("pub/house/garden/temperature", msg_json)
-
-    # convert meteo_vig in color for dep_59
+    # meteo_vig for dep_59
     if msg.topic == "pub/meteo_vig/dep/59":
-        # map level/color
-        lvl_color = {0: "000000", 1:"00FF00", 2:"FFFF00", 3:"FF6600", 4:"FF0000"}
-        color = lvl_color[0]
         try:
             json_data = json.loads(msg.payload)
-            color = lvl_color[json_data['value']]
+            dep59_lvl = int(json_data['value'])
+            if dep59_lvl not in range(1, 5):
+                dep59_lvl = 0
         except:
-            color = "000000"
-
-        mqttc.publish("test/color", color)
-
-    #print(msg.topic+" "+str(msg.qos)+" "+str(msg.payload))
+            dep59_lvl = 0
+        # map level/color for test/color
+        lvl_color = {0: "000000", 1:"00FF00", 2:"FFFF00", 3:"FF6600", 4:"FF0000"}
+        color = "000000"
+        try:
+            if (dep59_lvl != 0):
+                color = lvl_color[dep59_lvl]
+        except:
+            pass
+        mqttc.publish("test/color", color, retain=True)
+        # notification on lvl change
+        lvl_str = {1: "Vigilance verte", 2: "Vigilance jaune",
+                   3: "Vigilance orange", 4: "Vigilance rouge"}
+        if (_dep59_lvl != 0) and (_dep59_lvl != dep59_lvl):
+            # push message
+            try:
+                msg_str = lvl_str[dep59_lvl]
+                mqttc.publish("gateway/pushbullet/push_message",
+                              json.dumps({"title": u"Meteo Nord",
+                                          "body": msg_str}), qos=2)
+            except:
+                pass
+        # store valid vig level
+        if (dep59_lvl != 0):
+            _dep59_lvl = dep59_lvl
 
 def on_publish(mqttc, obj, mid):
     print("mid: "+str(mid))
@@ -82,4 +104,3 @@ mqttc.subscribe("rfm12/18/float/2", 0)
 mqttc.subscribe("pub/meteo_vig/dep/59", 0)
 
 mqttc.loop_forever()
-
