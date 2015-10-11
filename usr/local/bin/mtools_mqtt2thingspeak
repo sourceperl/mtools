@@ -7,10 +7,8 @@ import requests
 import pytz
 import json
 
-
 # global vars
 pressure_sea = None
-
 
 def iso_format(dt):
     """ return an ISO string (at zulu time) from a datetime object
@@ -37,8 +35,20 @@ def update_thingspeak(params):
     :return: True if update is a success, False otherwise
     :rtype: bool
     """
-    r = requests.post('https://api.thingspeak.com/update', data=params)
-    return ((r.status_code == 200) and (int(r.text) != 0))
+    req_try = 3
+    is_ok = False
+    while True:
+        req_try -= 1
+        try:
+            r = requests.post('https://api.thingspeak.com/update', data=params)
+        except requests.exceptions.RequestException as e:
+            pass
+        else:
+            is_ok = ((r.status_code == 200) and (int(r.text) != 0))
+            break
+        if req_try <= 0:
+            break
+    return is_ok
 
 def on_connect(mqttc, obj, flags, rc):
     print("connect ok [rc: "+str(rc)+"]")
