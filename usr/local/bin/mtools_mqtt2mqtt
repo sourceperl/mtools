@@ -28,7 +28,12 @@ def iso_format(dt):
     return isostring.format(int(round(dt.microsecond/1000.0)))
 
 def on_connect(mqttc, obj, flags, rc):
+    # log connect to broker
     print("connect ok [rc: "+str(rc)+"]")
+    # subscribes
+    mqttc.subscribe("rfm12/18/float/1", 0)
+    mqttc.subscribe("rfm12/18/float/2", 0)
+    mqttc.subscribe("pub/meteo_vig/dep/59", 0)
 
 def on_message(mqttc, obj, msg):
     # global vars
@@ -98,9 +103,5 @@ mqttc.on_connect = on_connect
 mqttc.on_publish = on_publish
 #mqttc.on_subscribe = on_subscribe
 mqttc.connect("localhost", 1883, 60)
-# subscribes
-mqttc.subscribe("rfm12/18/float/1", 0)
-mqttc.subscribe("rfm12/18/float/2", 0)
-mqttc.subscribe("pub/meteo_vig/dep/59", 0)
 
 mqttc.loop_forever()

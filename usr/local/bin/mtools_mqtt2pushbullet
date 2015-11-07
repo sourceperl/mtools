@@ -11,8 +11,10 @@ PB_API_KEY = "<YOUR_PB_KEY>"
 # some vars
 pb = Pushbullet(PB_API_KEY)
 
-#def on_connect(mqttc, obj, flags, rc):
-#    print("connect ok [rc: "+str(rc)+"]")
+def on_connect(mqttc, obj, flags, rc):
+    print("connect ok [rc: "+str(rc)+"]")
+    # subscribe
+    mqttc.subscribe("gateway/pushbullet/push_message", qos=2)
 
 def on_message(mqttc, obj, msg):
     # global vars
@@ -38,11 +40,9 @@ def on_message(mqttc, obj, msg):
 
 mqttc = mqtt.Client()
 mqttc.on_message = on_message
-#mqttc.on_connect = on_connect
+mqttc.on_connect = on_connect
 #mqttc.on_publish = on_publish
 #mqttc.on_subscribe = on_subscribe
 mqttc.connect("localhost", 1883, 60)
-# subscribes
-mqttc.subscribe("gateway/pushbullet/push_message", qos=2)
 
 mqttc.loop_forever()
