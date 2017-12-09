@@ -1,11 +1,18 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import paho.mqtt.client as mqtt
+import os
 from datetime import datetime
+import json
+from ConfigParser import ConfigParser
+import paho.mqtt.client as mqtt
 import requests
 import pytz
-import json
+
+# read config
+cnf = ConfigParser()
+cnf.read(os.path.expanduser('~/.mtools_config'))
+api_key_t_wam = cnf.get('thingspeak', 'api_key_t_wam')
 
 # global vars
 pressure_sea = None
@@ -44,12 +51,14 @@ def update_thingspeak(params):
         else:
             req_try -= 1
         try:
-            r = requests.post('https://api.thingspeak.com/update', data=params)
-            print("request: send data ["+str(params)+"]")
+            r = requests.post('https://api.thingspeak.com/update', data=params, timeout=5.0)
+            print("request: send data [%s]" % params)
         except requests.exceptions.RequestException as e:
+            print("request: error with data [%s]" % params)
             pass
         else:
             is_ok = ((r.status_code == 200) and (int(r.text) != 0))
+            print("is_ok: %s" % is_ok)
             break
     return is_ok
 
@@ -57,8 +66,7 @@ def on_connect(mqttc, obj, flags, rc):
     # log connect to broker
     print("connect ok [rc: "+str(rc)+"]")
     # subscribes
-    mqttc.subscribe("pub/house/garden/temperature", 0)
-    mqttc.subscribe("pub/house/garden/pressure_sea_level", 0)
+    mqttc.subscribe("pub/house/#", 0)
 
 def on_message(mqttc, obj, msg):
     global pressure_sea, temperature
@@ -71,7 +79,7 @@ def on_message(mqttc, obj, msg):
         except:
             temperature = None
         # upload value
-        update_thingspeak({'api_key': '<MY_KEY_HERE>', 'created_at': iso_dt, 'field1': temperature, 'field2': pressure_sea})
+        update_thingspeak({'api_key': api_key_t_wam, 'created_at': iso_dt, 'field1': temperature, 'field2': pressure_sea})
 
     if msg.topic == "pub/house/garden/pressure_sea_level":
         try:
@@ -81,20 +89,10 @@ def on_message(mqttc, obj, msg):
         except:
             pressure_sea = None
 
-def on_publish(mqttc, obj, mid):
-    print("mid: "+str(mid))
-
-#def on_subscribe(mqttc, obj, mid, granted_qos):
-#    print("Subscribed: "+str(mid)+" "+str(granted_qos))
-
-#def on_log(mqttc, obj, level, string):
-#    print(string)
 
 mqttc = mqtt.Client()
 mqttc.on_message = on_message
 mqttc.on_connect = on_connect
-mqttc.on_publish = on_publish
-#mqttc.on_subscribe = on_subscribe
 mqttc.connect("localhost", 1883, 60)
 
 mqttc.loop_forever()

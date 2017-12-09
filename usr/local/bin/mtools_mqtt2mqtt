@@ -31,9 +31,8 @@ def on_connect(mqttc, obj, flags, rc):
     # log connect to broker
     print("connect ok [rc: "+str(rc)+"]")
     # subscribes
-    mqttc.subscribe("rfm12/18/float/1", 0)
-    mqttc.subscribe("rfm12/18/float/2", 0)
-    mqttc.subscribe("pub/meteo_vig/dep/59", 0)
+    mqttc.subscribe("rfm12/#", 0)
+    mqttc.subscribe("pub/#", 0)
 
 def on_message(mqttc, obj, msg):
     # global vars
@@ -89,19 +88,13 @@ def on_message(mqttc, obj, msg):
             _dep59_lvl = dep59_lvl
 
 def on_publish(mqttc, obj, mid):
-    print("mid: "+str(mid))
+    print("mid: %s" % mid)
 
-#def on_subscribe(mqttc, obj, mid, granted_qos):
-#    print("Subscribed: "+str(mid)+" "+str(granted_qos))
-
-#def on_log(mqttc, obj, level, string):
-#    print(string)
 
 mqttc = mqtt.Client()
 mqttc.on_message = on_message
 mqttc.on_connect = on_connect
 mqttc.on_publish = on_publish
-#mqttc.on_subscribe = on_subscribe
 mqttc.connect("localhost", 1883, 60)
 
 mqttc.loop_forever()

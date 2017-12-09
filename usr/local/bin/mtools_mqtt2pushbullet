@@ -1,15 +1,19 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import os
+from ConfigParser import ConfigParser
+import json
 import paho.mqtt.client as mqtt
 from pushbullet import Pushbullet
-import json
 
-# some consts
-PB_API_KEY = "<YOUR_PB_KEY>"
+# read config
+cnf = ConfigParser()
+cnf.read(os.path.expanduser('~/.mtools_config'))
+api_key_notif = cnf.get('pushbullet', 'api_key_notif')
 
 # some vars
-pb = Pushbullet(PB_API_KEY)
+pb = Pushbullet(api_key_notif)
 
 def on_connect(mqttc, obj, flags, rc):
     print("connect ok [rc: "+str(rc)+"]")

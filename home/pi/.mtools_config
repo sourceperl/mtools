@@ -1,0 +1,4 @@
+[pushbullet]
+api_key_notif = <PUSHBULLET_API_KEY>
+[thingspeak]
+api_key_t_wam = <THINGSPEAK_API_KEY>

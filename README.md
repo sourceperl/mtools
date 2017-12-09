@@ -15,12 +15,18 @@ Setup Python :
 
     sudo pip install -r requirements.txt
 
+Setup mtools :
+
+    sudo cp home/pi/.mtools_config /home/pi/
+    sudo cp -r usr/local/bin/* /usr/local/bin/
+
+Setup config :
+
+Update .mtools_config with API credentials (Pushbullet, Thingspeak...)
+
 Setup supervisor :
 
     sudo apt-get install supervisor
     sudo cp etc/supervisor/conf.d/* /etc/supervisor/conf.d/
     sudo supervisorctl update
 
-Setup mtools :
-
-    sudo cp -r usr/local/bin/* /usr/local/bin/
