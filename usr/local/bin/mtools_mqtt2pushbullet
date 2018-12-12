@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import time
 from ConfigParser import ConfigParser
 import json
 import paho.mqtt.client as mqtt
@@ -12,9 +13,7 @@ cnf = ConfigParser()
 cnf.read(os.path.expanduser('~/.mtools_config'))
 api_key_notif = cnf.get('pushbullet', 'api_key_notif')
 
-# some vars
-pb = Pushbullet(api_key_notif)
-
+# mqtt callbacks
 def on_connect(mqttc, obj, flags, rc):
     print("connect ok [rc: "+str(rc)+"]")
     # subscribe
@@ -42,11 +41,21 @@ def on_message(mqttc, obj, msg):
 #def on_log(mqttc, obj, level, string):
 #    print(string)
 
-mqttc = mqtt.Client()
-mqttc.on_message = on_message
-mqttc.on_connect = on_connect
-#mqttc.on_publish = on_publish
-#mqttc.on_subscribe = on_subscribe
-mqttc.connect("localhost", 1883, 60)
+if __name__ == "__main__":
+    while True:
+        try:
+            # init pushbullet access
+            pb = Pushbullet(api_key_notif)
 
-mqttc.loop_forever()
+            # init mqtt
+            mqttc = mqtt.Client()
+            mqttc.on_message = on_message
+            mqttc.on_connect = on_connect
+            #mqttc.on_publish = on_publish
+            #mqttc.on_subscribe = on_subscribe
+            mqttc.connect("localhost", 1883, 60)
+
+            # main loop
+            mqttc.loop_forever()
+        except:
+            time.sleep(30.0)
