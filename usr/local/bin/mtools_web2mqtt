@@ -36,7 +36,7 @@ def get_weather_vig():
     # some const
     URL = 'http://vigilance.meteofrance.com/data/NXFR34_LFPW_.xml'
     # request XML data from server
-    r = requests.get(URL)
+    r = requests.get(URL, timeout=5.0)
     # check error
     if (r.status_code == 200):
         # dom parsing (convert UTF-8 r.text to XML char)
@@ -92,6 +92,9 @@ def job_vig_meteo():
 
 # schedule all jobs
 schedule.every(15).minutes.do(job_vig_meteo)
+
+# first call at startup
+job_vig_meteo()
 
 # main loop
 while True:
